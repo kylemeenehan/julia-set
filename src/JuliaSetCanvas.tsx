@@ -32,7 +32,7 @@ const CDisplay = styled.div`
   padding: 4px;
 `;
 
-const maxIterations = 150;
+const maxIterations = 900;
 const origSize: Vec = { x: 3, y: 3 };
 const size: Vec = { x: origSize.x, y: origSize.y };
 const originPosition: Vec = { x: 0, y: 0 };

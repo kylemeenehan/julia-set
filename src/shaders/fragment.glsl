@@ -53,7 +53,7 @@ float getIterationCount(float px, float py) {
   float iter = 0.0;
   // Fixed loop of 300 iterations (GLSL requires loop bounds to be known at compile time)
   // We break early if we hit the max or if the value escapes
-  for (int i = 0; i < 300; i++) {
+  for (int i = 0; i < 1000; i++) {
     if (iter >= uMaxIterations) break;
     
     // Julia set formula: z = z^2 + c
