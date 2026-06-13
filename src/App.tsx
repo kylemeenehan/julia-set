@@ -8,6 +8,12 @@ const Canvas = styled.canvas`
   height: 100%;
 `;
 
+const Button = styled.button`
+  position: fixed;
+  bottom: 10px;
+  left: 10px;
+`;
+
 const x = 0.1;
 const y = 0.5;
 const maxIterations = 150;
@@ -130,6 +136,37 @@ function getRGBFromHSV({
   return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
 }
 
+function getIterationCount({
+  x,
+  y,
+  width,
+  height,
+}: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}): number {
+  const sqZ = new p5.Vector(0, 0);
+  const z = new p5.Vector(
+    pos.x + scale(x, 0, width, -size.x / 2, size.x / 2),
+    pos.y + scale(y, height, 0, -size.y / 2, size.y / 2),
+  );
+
+  let iter = 0;
+  while (iter < maxIterations) {
+    sqZ.x = z.x * z.x - z.y * z.y;
+    sqZ.y = 2 * z.x * z.y;
+    z.x = sqZ.x + c.x;
+    z.y = sqZ.y + c.y;
+    if (Math.abs(z.x + z.y) > 16) {
+      break;
+    }
+    iter++;
+  }
+  return iter;
+}
+
 function App() {
   const canvas = useRef<HTMLCanvasElement>(null);
 
@@ -167,23 +204,12 @@ function App() {
 
     for (let x = 0; x < width; x++) {
       for (let y = 0; y < height; y++) {
-        const sqZ = new p5.Vector(0, 0);
-        const z = new p5.Vector(
-          pos.x + scale(x, 0, width, -size.x / 2, size.x / 2),
-          pos.y + scale(y, height, 0, -size.y / 2, size.y / 2),
-        );
-
-        let iter = 0;
-        while (iter < maxIterations) {
-          sqZ.x = z.x * z.x - z.y * z.y;
-          sqZ.y = 2 * z.x * z.y;
-          z.x = sqZ.x + c.x;
-          z.y = sqZ.y + c.y;
-          if (Math.abs(z.x + z.y) > 16) {
-            break;
-          }
-          iter++;
-        }
+        const iter = getIterationCount({
+          x,
+          y,
+          width,
+          height,
+        });
         const [r, g, b] = getRGBFromHSV({
           h: scale(iter, 0, maxIterations, 0, 1),
           s: 1,
@@ -205,13 +231,14 @@ function App() {
     console.timeEnd("plot");
   }
 
-  useEffect(() => {
-    plot();
-  }, []);
+  // useEffect(() => {
+  //   plot();
+  // }, []);
 
   return (
     <>
       <Canvas ref={canvas} />
+      <Button onClick={plot}>Plot</Button>
     </>
   );
 }
