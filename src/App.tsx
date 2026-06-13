@@ -147,7 +147,6 @@ function getIterationCount({
   width: number;
   height: number;
 }): number {
-  const sqZ = new p5.Vector(0, 0);
   const z = new p5.Vector(
     pos.x + scale(x, 0, width, -size.x / 2, size.x / 2),
     pos.y + scale(y, height, 0, -size.y / 2, size.y / 2),
@@ -155,10 +154,9 @@ function getIterationCount({
 
   let iter = 0;
   while (iter < maxIterations) {
-    sqZ.x = z.x * z.x - z.y * z.y;
-    sqZ.y = 2 * z.x * z.y;
-    z.x = sqZ.x + c.x;
-    z.y = sqZ.y + c.y;
+    const { x, y } = z;
+    z.x = x * x - y * y + c.x;
+    z.y = 2 * x * y + c.y;
     if (Math.abs(z.x + z.y) > 16) {
       break;
     }
