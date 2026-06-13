@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import "./App.css";
 import styled from "@emotion/styled";
 import { drawScene, type ProgramInfo } from "./draw-scene";
@@ -200,15 +200,12 @@ function App() {
     console.timeEnd("plotWebGL");
   }
 
-  // Set up mouse move listener to update Julia constant c
-  // This effect runs once when the component mounts
-  useEffect(() => {
-    const canvasElement = canvas.current;
-    if (!canvasElement) return;
-
-    // Handler for mouse move events
-    // Throttled to 60 FPS using timestamp checking
-    const handleMouseMove = (event: MouseEvent) => {
+  const handleMouseMove = useCallback(
+    (event: MouseEvent) => {
+      const canvasElement = canvas.current;
+      if (!canvasElement) {
+        return;
+      }
       const now = Date.now();
 
       // Only process if enough time has passed (60 FPS = ~16.67ms between frames)
@@ -243,16 +240,9 @@ function App() {
       // newC.y = newC.y / 4;
       // Update the Julia constant c
       setMouseC(newC);
-    };
-
-    // Attach the mouse move listener
-    canvasElement.addEventListener("mousemove", handleMouseMove);
-
-    // Cleanup: remove the listener when component unmounts
-    return () => {
-      canvasElement.removeEventListener("mousemove", handleMouseMove);
-    };
-  }, [frameInterval]); // Only depends on frameInterval which is constant
+    },
+    [setMouseC, frameInterval],
+  );
 
   // Render whenever mouseC changes (after being updated by mouse move)
   useEffect(() => {
@@ -262,7 +252,8 @@ function App() {
 
   return (
     <>
-      <Canvas ref={canvas} />
+      {/* @ts-expect-error TODO: properly type mouse event */}
+      <Canvas ref={canvas} onMouseMove={handleMouseMove} />
       <CDisplay>
         C is ({mouseC.x}, {mouseC.y})
       </CDisplay>
