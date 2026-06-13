@@ -139,15 +139,17 @@ function App() {
     })!;
 
     // Get the DPR and size of the canvas
-    const dpr = window.devicePixelRatio;
+    const devicePixelRatio = 1;
+    // TODO: return this when performance is better
+    // const devicePixelRatio = window.devicePixelRatio;
     const rect = canvas.current.getBoundingClientRect();
 
     // Set the "actual" size of the canvas
-    canvas.current.width = rect.width * dpr;
-    canvas.current.height = rect.height * dpr;
+    canvas.current.width = rect.width * devicePixelRatio;
+    canvas.current.height = rect.height * devicePixelRatio;
 
     // Scale the context to ensure correct drawing operations
-    ctx.scale(dpr, dpr);
+    ctx.scale(devicePixelRatio, devicePixelRatio);
 
     // Set the "drawn" size of the canvas
     canvas.current.style.width = `${rect.width}px`;
