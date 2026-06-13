@@ -15,7 +15,8 @@ const origSize: p5.Vector = new p5.Vector(3, 3);
 const size: p5.Vector = new p5.Vector(origSize.x, origSize.y);
 const originPosition: p5.Vector = new p5.Vector(0, 0);
 const pos: p5.Vector = new p5.Vector(originPosition.x, originPosition.y);
-const c = new p5.Vector(0, 0);
+// const c = new p5.Vector(0, 0);
+const c = new p5.Vector(-0.742, 0.163);
 
 function constrain(n: number, low: number, high: number): number {
   return Math.max(Math.min(n, high), low);
@@ -133,9 +134,28 @@ function App() {
       return;
     }
 
-    const ctx: CanvasRenderingContext2D = canvas.current.getContext("2d")!;
+    const ctx: CanvasRenderingContext2D = canvas.current.getContext("2d", {
+      alpha: false,
+    })!;
+
+    // Get the DPR and size of the canvas
+    const dpr = window.devicePixelRatio;
+    const rect = canvas.current.getBoundingClientRect();
+
+    // Set the "actual" size of the canvas
+    canvas.current.width = rect.width * dpr;
+    canvas.current.height = rect.height * dpr;
+
+    // Scale the context to ensure correct drawing operations
+    ctx.scale(dpr, dpr);
+
+    // Set the "drawn" size of the canvas
+    canvas.current.style.width = `${rect.width}px`;
+    canvas.current.style.height = `${rect.height}px`;
 
     const { width, height } = ctx.canvas;
+    console.log("width: ", width);
+    console.log("height: ", height);
     const imageData = ctx.getImageData(0, 0, width, height);
 
     for (let x = 0; x < width; x++) {
