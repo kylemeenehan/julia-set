@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import "./App.css";
 import styled from "@emotion/styled";
 import { drawScene, type ProgramInfo } from "./draw-scene";
@@ -53,7 +53,7 @@ function constrain(n: number, low: number, high: number): number {
  *
  * Replacement for p5.js map
  */
-function scale(
+  function scale(
   value: number,
   fromRangeStart: number,
   fromRangeEnd: number,
@@ -74,6 +74,25 @@ function scale(
   } else {
     return constrain(newval, toRangeEnd, toRangeStart);
   }
+}
+
+// Helper function to map mouse coordinates to complex plane coordinates
+function getComplexCoordinateFromMouse(
+  mouseX: number,
+  mouseY: number,
+  canvasWidth: number,
+  canvasHeight: number,
+  viewPosX: number,
+  viewPosY: number,
+  viewSizeX: number,
+  viewSizeY: number,
+): Vec {
+  // Map mouse pixel coordinates to complex plane coordinates
+  // The mouse position is converted using the same scale function as the shader
+  return {
+    x: viewPosX + scale(mouseX, 0, canvasWidth, -viewSizeX / 2, viewSizeX / 2),
+    y: viewPosY + scale(mouseY, canvasHeight, 0, -viewSizeY / 2, viewSizeY / 2),
+  };
 }
 
 function setPixelRGB({
@@ -267,6 +286,13 @@ function initShaderProgram(
 
 function App() {
   const canvas = useRef<HTMLCanvasElement>(null);
+  
+  // State for tracking mouse position mapped to complex plane
+  const [mouseC, setMouseC] = useState<Vec>({ x: -0.742, y: 0.163 });
+  
+  // Refs for 60 FPS throttling
+  const lastRenderTimeRef = useRef<number>(0);
+  const frameInterval = 1000 / 60; // ~16.67ms for 60 FPS
 
   function plot() {
     console.time("plot");
@@ -407,9 +433,9 @@ function App() {
     gl.uniform1f(programInfo.uniformLocations.sizeX, size.x);
     gl.uniform1f(programInfo.uniformLocations.sizeY, size.y);
     
-    // Pass Julia constant c
-    gl.uniform1f(programInfo.uniformLocations.cx, c.x);
-    gl.uniform1f(programInfo.uniformLocations.cy, c.y);
+    // Pass Julia constant c (use mouseC if available, otherwise use default)
+    gl.uniform1f(programInfo.uniformLocations.cx, mouseC.x);
+    gl.uniform1f(programInfo.uniformLocations.cy, mouseC.y);
     
     // Pass iteration limit
     gl.uniform1f(programInfo.uniformLocations.maxIterations, maxIterations);
@@ -423,6 +449,64 @@ function App() {
 
     console.timeEnd("plotWebGL");
   }
+
+  // Set up mouse move listener to update Julia constant c
+  // This effect runs once when the component mounts
+  useEffect(() => {
+    const canvasElement = canvas.current;
+    if (!canvasElement) return;
+
+    // Handler for mouse move events
+    // Throttled to 60 FPS using timestamp checking
+    const handleMouseMove = (event: MouseEvent) => {
+      const now = Date.now();
+      
+      // Only process if enough time has passed (60 FPS = ~16.67ms between frames)
+      if (now - lastRenderTimeRef.current < frameInterval) {
+        return;
+      }
+      lastRenderTimeRef.current = now;
+
+      // Get the canvas bounding rectangle
+      // This tells us where the canvas is positioned on screen
+      const rect = canvasElement.getBoundingClientRect();
+      
+      // Calculate mouse position relative to canvas
+      // (0, 0) is at the top-left of the canvas
+      const mouseX = event.clientX - rect.left;
+      const mouseY = event.clientY - rect.top;
+      
+      // Map mouse coordinates to complex plane coordinates
+      // The origin (0, 0) of the complex plane is in the center of the screen
+      const newC = getComplexCoordinateFromMouse(
+        mouseX,
+        mouseY,
+        rect.width,
+        rect.height,
+        pos.x,
+        pos.y,
+        size.x,
+        size.y,
+      );
+      
+      // Update the Julia constant c
+      setMouseC(newC);
+    };
+
+    // Attach the mouse move listener
+    canvasElement.addEventListener("mousemove", handleMouseMove);
+
+    // Cleanup: remove the listener when component unmounts
+    return () => {
+      canvasElement.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, [frameInterval]); // Only depends on frameInterval which is constant
+
+  // Render whenever mouseC changes (after being updated by mouse move)
+  useEffect(() => {
+    plotWebGL();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mouseC]); // Re-render whenever the Julia constant c changes
 
   // useEffect(() => {
   //   plot();
