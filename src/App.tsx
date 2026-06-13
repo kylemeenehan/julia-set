@@ -20,29 +20,22 @@ const Canvas = styled.canvas`
   height: 100%;
 `;
 
-const ButtonContainer = styled.div`
+const CDisplay = styled.div`
   position: fixed;
   bottom: 10px;
   left: 10px;
   display: flex;
   gap: 5px;
+  background: white;
+  color: black;
+  padding: 4px;
 `;
 
-const Button = styled.button`
-  position: fixed;
-  bottom: 10px;
-  left: 10px;
-`;
-
-const x = 0.1;
-const y = 0.5;
 const maxIterations = 150;
 const origSize: Vec = { x: 3, y: 3 };
 const size: Vec = { x: origSize.x, y: origSize.y };
 const originPosition: Vec = { x: 0, y: 0 };
 const pos: Vec = { x: originPosition.x, y: originPosition.y };
-// const c = new p5.Vector(0, 0);
-const c: Vec = { x: -0.742, y: 0.163 };
 
 function constrain(n: number, low: number, high: number): number {
   return Math.max(Math.min(n, high), low);
@@ -53,7 +46,7 @@ function constrain(n: number, low: number, high: number): number {
  *
  * Replacement for p5.js map
  */
-  function scale(
+function scale(
   value: number,
   fromRangeStart: number,
   fromRangeEnd: number,
@@ -93,115 +86,6 @@ function getComplexCoordinateFromMouse(
     x: viewPosX + scale(mouseX, 0, canvasWidth, -viewSizeX / 2, viewSizeX / 2),
     y: viewPosY + scale(mouseY, canvasHeight, 0, -viewSizeY / 2, viewSizeY / 2),
   };
-}
-
-function setPixelRGB({
-  x,
-  y,
-  width,
-  r,
-  g,
-  b,
-  pixels,
-}: {
-  x: number;
-  y: number;
-  width: number;
-  r: number;
-  g: number;
-  b: number;
-  pixels: ImageDataArray;
-}) {
-  const pixelID = (x + y * width) * 4;
-  pixels[pixelID + 0] = r;
-  pixels[pixelID + 1] = g;
-  pixels[pixelID + 2] = b;
-  pixels[pixelID + 3] = 255;
-}
-
-function getRGBFromHSV({
-  h,
-  s,
-  v,
-}: {
-  h: number;
-  s: number;
-  v: number;
-}): [number, number, number] {
-  if (v === 0) {
-    return [0, 0, 0];
-  }
-
-  let r = 0;
-  let g = 0;
-  let b = 0;
-  const i = Math.floor(h * 6);
-  const f = h * 6 - i;
-  const p = v * (1 - s);
-  const q = v * (1 - f * s);
-  const t = v * (1 - (1 - f) * s);
-  switch (i % 6) {
-    case 0:
-      r = v;
-      g = t;
-      b = p;
-      break;
-    case 1:
-      r = q;
-      g = v;
-      b = p;
-      break;
-    case 2:
-      r = p;
-      g = v;
-      b = t;
-      break;
-    case 3:
-      r = p;
-      g = q;
-      b = v;
-      break;
-    case 4:
-      r = t;
-      g = p;
-      b = v;
-      break;
-    case 5:
-      r = v;
-      g = p;
-      b = q;
-      break;
-  }
-  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
-}
-
-function getIterationCount({
-  x,
-  y,
-  width,
-  height,
-}: {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}): number {
-  const z: Vec = {
-    x: pos.x + scale(x, 0, width, -size.x / 2, size.x / 2),
-    y: pos.y + scale(y, height, 0, -size.y / 2, size.y / 2),
-  };
-
-  let iter = 0;
-  while (iter < maxIterations) {
-    const { x, y } = z;
-    z.x = x * x - y * y + c.x;
-    z.y = 2 * x * y + c.y;
-    if (Math.abs(z.x + z.y) > 16) {
-      break;
-    }
-    iter++;
-  }
-  return iter;
 }
 
 //
@@ -262,11 +146,11 @@ function initShaderProgram(
   // Create a shader program
   // A program is a combination of vertex and fragment shaders
   const shaderProgram = gl.createProgram();
-  
+
   // Attach both shaders to the program
   gl.attachShader(shaderProgram, vertexShader);
   gl.attachShader(shaderProgram, fragmentShader);
-  
+
   // Link the program
   // This finalizes the combination of shaders into an executable program
   gl.linkProgram(shaderProgram);
@@ -286,74 +170,13 @@ function initShaderProgram(
 
 function App() {
   const canvas = useRef<HTMLCanvasElement>(null);
-  
+
   // State for tracking mouse position mapped to complex plane
   const [mouseC, setMouseC] = useState<Vec>({ x: -0.742, y: 0.163 });
-  
+
   // Refs for 60 FPS throttling
   const lastRenderTimeRef = useRef<number>(0);
   const frameInterval = 1000 / 60; // ~16.67ms for 60 FPS
-
-  function plot() {
-    console.time("plot");
-    if (!canvas.current) {
-      return;
-    }
-
-    const ctx: CanvasRenderingContext2D = canvas.current.getContext("2d", {
-      alpha: false,
-    })!;
-
-    // Get the DPR and size of the canvas
-    const devicePixelRatio = 1;
-    // TODO: return this when performance is better
-    // const devicePixelRatio = window.devicePixelRatio;
-    const rect = canvas.current.getBoundingClientRect();
-
-    // Set the "actual" size of the canvas
-    canvas.current.width = rect.width * devicePixelRatio;
-    canvas.current.height = rect.height * devicePixelRatio;
-
-    // Scale the context to ensure correct drawing operations
-    ctx.scale(devicePixelRatio, devicePixelRatio);
-
-    // Set the "drawn" size of the canvas
-    canvas.current.style.width = `${rect.width}px`;
-    canvas.current.style.height = `${rect.height}px`;
-
-    const { width, height } = ctx.canvas;
-    console.log("width: ", width);
-    console.log("height: ", height);
-    const imageData = ctx.getImageData(0, 0, width, height);
-
-    for (let x = 0; x < width; x++) {
-      for (let y = 0; y < height; y++) {
-        const iter = getIterationCount({
-          x,
-          y,
-          width,
-          height,
-        });
-        const [r, g, b] = getRGBFromHSV({
-          h: scale(iter, 0, maxIterations, 0, 1),
-          s: 1,
-          // TODO: can probably just set to black and avoid the calculation if this is 0
-          v: iter === maxIterations ? 0 : 1,
-        });
-        setPixelRGB({
-          x,
-          y,
-          width,
-          r,
-          g,
-          b,
-          pixels: imageData.data,
-        });
-      }
-    }
-    ctx.putImageData(imageData, 0, 0);
-    console.timeEnd("plot");
-  }
 
   function plotWebGL() {
     console.time("plotWebGL");
@@ -374,14 +197,20 @@ function App() {
     // This is critical: canvas.width/height is the actual resolution WebGL renders at
     // If not set, WebGL defaults to 300x150 pixels!
     // Note: devicePixelRatio would use retina/high-DPI resolution; we keep it at 1 for simplicity
-    const devicePixelRatio = 1;
+    const devicePixelRatio = window.devicePixelRatio;
     const rect = canvas.current.getBoundingClientRect();
     canvas.current.width = rect.width * devicePixelRatio;
     canvas.current.height = rect.height * devicePixelRatio;
+    // // Scale the context to ensure correct drawing operations
+    // gl.scale(devicePixelRatio, devicePixelRatio);
 
     // Compile vertex and fragment shaders into a shader program
     // A shader program is like an executable that runs on the GPU
-    const shaderProgram = initShaderProgram(gl, vertexShaderSource, fragmentShaderSource);
+    const shaderProgram = initShaderProgram(
+      gl,
+      vertexShaderSource,
+      fragmentShaderSource,
+    );
     if (shaderProgram === null) {
       console.error("error from initShaderProgram");
       return;
@@ -426,17 +255,17 @@ function App() {
     // Pass canvas dimensions to shader
     gl.uniform1f(programInfo.uniformLocations.canvasWidth, width);
     gl.uniform1f(programInfo.uniformLocations.canvasHeight, height);
-    
+
     // Pass Julia set parameters to shader
     gl.uniform1f(programInfo.uniformLocations.posX, pos.x);
     gl.uniform1f(programInfo.uniformLocations.posY, pos.y);
     gl.uniform1f(programInfo.uniformLocations.sizeX, size.x);
     gl.uniform1f(programInfo.uniformLocations.sizeY, size.y);
-    
+
     // Pass Julia constant c (use mouseC if available, otherwise use default)
     gl.uniform1f(programInfo.uniformLocations.cx, mouseC.x);
     gl.uniform1f(programInfo.uniformLocations.cy, mouseC.y);
-    
+
     // Pass iteration limit
     gl.uniform1f(programInfo.uniformLocations.maxIterations, maxIterations);
 
@@ -460,7 +289,7 @@ function App() {
     // Throttled to 60 FPS using timestamp checking
     const handleMouseMove = (event: MouseEvent) => {
       const now = Date.now();
-      
+
       // Only process if enough time has passed (60 FPS = ~16.67ms between frames)
       if (now - lastRenderTimeRef.current < frameInterval) {
         return;
@@ -470,12 +299,12 @@ function App() {
       // Get the canvas bounding rectangle
       // This tells us where the canvas is positioned on screen
       const rect = canvasElement.getBoundingClientRect();
-      
+
       // Calculate mouse position relative to canvas
       // (0, 0) is at the top-left of the canvas
       const mouseX = event.clientX - rect.left;
       const mouseY = event.clientY - rect.top;
-      
+
       // Map mouse coordinates to complex plane coordinates
       // The origin (0, 0) of the complex plane is in the center of the screen
       const newC = getComplexCoordinateFromMouse(
@@ -488,7 +317,7 @@ function App() {
         size.x,
         size.y,
       );
-      
+
       // Update the Julia constant c
       setMouseC(newC);
     };
@@ -508,17 +337,12 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mouseC]); // Re-render whenever the Julia constant c changes
 
-  // useEffect(() => {
-  //   plot();
-  // }, []);
-
   return (
     <>
       <Canvas ref={canvas} />
-      <ButtonContainer>
-        <button onClick={plot}>Plot</button>
-        <button onClick={plotWebGL}>Plot WebGL</button>
-      </ButtonContainer>
+      <CDisplay>
+        C is ({mouseC.x}, {mouseC.y})
+      </CDisplay>
     </>
   );
 }
