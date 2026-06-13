@@ -327,14 +327,17 @@ function App() {
       return;
     }
 
+    // Set canvas resolution to match display size
+    const devicePixelRatio = 1;
+    const rect = canvas.current.getBoundingClientRect();
+    canvas.current.width = rect.width * devicePixelRatio;
+    canvas.current.height = rect.height * devicePixelRatio;
+
     const vsSource = `
     attribute vec4 aVertexPosition;
 
-    uniform mat4 uModelViewMatrix;
-    uniform mat4 uProjectionMatrix;
-
     void main(void) {
-      gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+      gl_Position = aVertexPosition;
     }
   `;
 
@@ -412,14 +415,6 @@ function App() {
         vertexPosition: gl.getAttribLocation(shaderProgram, "aVertexPosition"),
       },
       uniformLocations: {
-        projectionMatrix: gl.getUniformLocation(
-          shaderProgram,
-          "uProjectionMatrix",
-        ),
-        modelViewMatrix: gl.getUniformLocation(
-          shaderProgram,
-          "uModelViewMatrix",
-        ),
         canvasWidth: gl.getUniformLocation(shaderProgram, "uCanvasWidth"),
         canvasHeight: gl.getUniformLocation(shaderProgram, "uCanvasHeight"),
         posX: gl.getUniformLocation(shaderProgram, "uPosX"),
@@ -435,10 +430,13 @@ function App() {
     // Tell WebGL to use our program before setting uniforms
     gl.useProgram(programInfo.program);
 
+    // Set viewport to match canvas size
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
     // Set uniform values from current state
-    const rect = canvas.current.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
+    // Use actual canvas resolution, not CSS size
+    const width = gl.canvas.width;
+    const height = gl.canvas.height;
 
     gl.uniform1f(programInfo.uniformLocations.canvasWidth, width);
     gl.uniform1f(programInfo.uniformLocations.canvasHeight, height);
