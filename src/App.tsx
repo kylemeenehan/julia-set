@@ -83,6 +83,10 @@ function getRGBFromHSV({
   s: number;
   v: number;
 }): [number, number, number] {
+  if (v === 0) {
+    return [0, 0, 0];
+  }
+
   let r = 0;
   let g = 0;
   let b = 0;
@@ -130,6 +134,7 @@ function App() {
   const canvas = useRef<HTMLCanvasElement>(null);
 
   function plot() {
+    console.time("plot");
     if (!canvas.current) {
       return;
     }
@@ -197,6 +202,7 @@ function App() {
       }
     }
     ctx.putImageData(imageData, 0, 0);
+    console.timeEnd("plot");
   }
 
   useEffect(() => {
