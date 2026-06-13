@@ -1,6 +1,8 @@
 import { useRef } from "react";
 import "./App.css";
 import styled from "@emotion/styled";
+import { drawScene, type ProgramInfo } from "./draw-scene";
+import { initBuffers } from "./init-buffers";
 
 type Vec = {
   x: number;
@@ -10,6 +12,14 @@ type Vec = {
 const Canvas = styled.canvas`
   width: 100%;
   height: 100%;
+`;
+
+const ButtonContainer = styled.div`
+  position: fixed;
+  bottom: 10px;
+  left: 10px;
+  display: flex;
+  gap: 5px;
 `;
 
 const Button = styled.button`
@@ -169,6 +179,77 @@ function getIterationCount({
   return iter;
 }
 
+//
+// creates a shader of the given type, uploads the source and
+// compiles it.
+//
+function loadShader(
+  gl: WebGLRenderingContext,
+  type: GLenum,
+  source: string,
+): WebGLShader | null {
+  const shader = gl.createShader(type);
+
+  if (shader === null) {
+    console.error("problem loading shader");
+    return null;
+  }
+
+  // Send the source to the shader object
+
+  gl.shaderSource(shader, source);
+
+  // Compile the shader program
+
+  gl.compileShader(shader);
+
+  // See if it compiled successfully
+
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    alert(
+      `An error occurred compiling the shaders: ${gl.getShaderInfoLog(shader)}`,
+    );
+    gl.deleteShader(shader);
+    return null;
+  }
+
+  return shader;
+}
+
+function initShaderProgram(
+  gl: WebGLRenderingContext,
+  vsSource: string,
+  fsSource: string,
+): WebGLProgram | null {
+  const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+  const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+  if (vertexShader === null || fragmentShader === null) {
+    console.error("problem initialising shader program");
+    return null;
+  }
+
+  // Create the shader program
+
+  const shaderProgram = gl.createProgram();
+  gl.attachShader(shaderProgram, vertexShader);
+  gl.attachShader(shaderProgram, fragmentShader);
+  gl.linkProgram(shaderProgram);
+
+  // If creating the shader program failed, alert
+
+  if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+    alert(
+      `Unable to initialize the shader program: ${gl.getProgramInfoLog(
+        shaderProgram,
+      )}`,
+    );
+    return null;
+  }
+
+  return shaderProgram;
+}
+
 function App() {
   const canvas = useRef<HTMLCanvasElement>(null);
 
@@ -233,6 +314,75 @@ function App() {
     console.timeEnd("plot");
   }
 
+  function plotWebGL() {
+    console.time("plotWebGL");
+    if (!canvas.current) {
+      return;
+    }
+
+    const gl = canvas.current.getContext("webgl");
+
+    if (gl === null) {
+      console.error("WebGL not supported");
+      return;
+    }
+
+    const vsSource = `
+    attribute vec4 aVertexPosition;
+    uniform mat4 uModelViewMatrix;
+    uniform mat4 uProjectionMatrix;
+    void main() {
+      gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+    }
+  `;
+
+    const fsSource = `
+    void main() {
+      gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+    }
+  `;
+
+    const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
+    if (shaderProgram === null) {
+      console.error("error from initShaderProgram");
+      return;
+    }
+
+    // Collect all the info needed to use the shader program.
+    // Look up which attribute our shader program is using
+    // for aVertexPosition and look up uniform locations.
+    const programInfo: ProgramInfo = {
+      program: shaderProgram,
+      attribLocations: {
+        vertexPosition: gl.getAttribLocation(shaderProgram, "aVertexPosition"),
+      },
+      uniformLocations: {
+        projectionMatrix: gl.getUniformLocation(
+          shaderProgram,
+          "uProjectionMatrix",
+        ),
+        modelViewMatrix: gl.getUniformLocation(
+          shaderProgram,
+          "uModelViewMatrix",
+        ),
+      },
+    };
+
+    // Here's where we call the routine that builds all the
+    // objects we'll be drawing.
+    const buffers = initBuffers(gl);
+
+    // Draw the scene
+    drawScene(gl, programInfo, buffers);
+
+    // // Set clear color to black, fully opaque
+    // gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    // // Clear the color buffer with specified clear color
+    // gl.clear(gl.COLOR_BUFFER_BIT);
+
+    console.timeEnd("plotWebGL");
+  }
+
   // useEffect(() => {
   //   plot();
   // }, []);
@@ -240,7 +390,10 @@ function App() {
   return (
     <>
       <Canvas ref={canvas} />
-      <Button onClick={plot}>Plot</Button>
+      <ButtonContainer>
+        <button onClick={plot}>Plot</button>
+        <button onClick={plotWebGL}>Plot WebGL</button>
+      </ButtonContainer>
     </>
   );
 }
