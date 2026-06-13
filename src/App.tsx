@@ -7,7 +7,6 @@ import CssBaseline from "@mui/material/CssBaseline";
 import { AppBar, DrawerHeader, drawerWidth, Main } from "./layout";
 import Drawer from "@mui/material/Drawer";
 
-import { useTheme } from "@mui/material/styles";
 import List from "@mui/material/List";
 import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
@@ -141,7 +140,6 @@ function App() {
     [setMouseC, frameInterval],
   );
 
-  const theme = useTheme();
   const [open, setOpen] = useState(false);
 
   const handleDrawerOpen = () => {
