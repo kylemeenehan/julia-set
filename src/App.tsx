@@ -1,7 +1,11 @@
-import { useEffect, useRef } from "react";
-import p5 from "p5";
+import { useRef } from "react";
 import "./App.css";
 import styled from "@emotion/styled";
+
+type Vec = {
+  x: number;
+  y: number;
+};
 
 const Canvas = styled.canvas`
   width: 100%;
@@ -17,12 +21,12 @@ const Button = styled.button`
 const x = 0.1;
 const y = 0.5;
 const maxIterations = 150;
-const origSize: p5.Vector = new p5.Vector(3, 3);
-const size: p5.Vector = new p5.Vector(origSize.x, origSize.y);
-const originPosition: p5.Vector = new p5.Vector(0, 0);
-const pos: p5.Vector = new p5.Vector(originPosition.x, originPosition.y);
+const origSize: Vec = { x: 3, y: 3 };
+const size: Vec = { x: origSize.x, y: origSize.y };
+const originPosition: Vec = { x: 0, y: 0 };
+const pos: Vec = { x: originPosition.x, y: originPosition.y };
 // const c = new p5.Vector(0, 0);
-const c = new p5.Vector(-0.742, 0.163);
+const c: Vec = { x: -0.742, y: 0.163 };
 
 function constrain(n: number, low: number, high: number): number {
   return Math.max(Math.min(n, high), low);
@@ -147,10 +151,10 @@ function getIterationCount({
   width: number;
   height: number;
 }): number {
-  const z = new p5.Vector(
-    pos.x + scale(x, 0, width, -size.x / 2, size.x / 2),
-    pos.y + scale(y, height, 0, -size.y / 2, size.y / 2),
-  );
+  const z: Vec = {
+    x: pos.x + scale(x, 0, width, -size.x / 2, size.x / 2),
+    y: pos.y + scale(y, height, 0, -size.y / 2, size.y / 2),
+  };
 
   let iter = 0;
   while (iter < maxIterations) {
