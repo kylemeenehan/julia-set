@@ -1,9 +1,11 @@
 import { mat4 } from "gl-matrix";
+import type { Buffers } from "./init-buffers";
 
 export type ProgramInfo = {
   program: WebGLProgram;
   attribLocations: {
     vertexPosition: number;
+    vertexColor: number;
   };
   uniformLocations: {
     projectionMatrix: WebGLUniformLocation | null;
@@ -11,10 +13,34 @@ export type ProgramInfo = {
   };
 };
 
+// Tell WebGL how to pull out the colors from the color buffer
+// into the vertexColor attribute.
+export function setColorAttribute(
+  gl: WebGLRenderingContext,
+  buffers: Buffers,
+  programInfo: ProgramInfo,
+) {
+  const numComponents = 4;
+  const type = gl.FLOAT;
+  const normalize = false;
+  const stride = 0;
+  const offset = 0;
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffers.color);
+  gl.vertexAttribPointer(
+    programInfo.attribLocations.vertexColor,
+    numComponents,
+    type,
+    normalize,
+    stride,
+    offset,
+  );
+  gl.enableVertexAttribArray(programInfo.attribLocations.vertexColor);
+}
+
 export function drawScene(
   gl: WebGLRenderingContext,
   programInfo: ProgramInfo,
-  buffers: { position: WebGLBuffer },
+  buffers: Buffers,
 ) {
   gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
   gl.clearDepth(1.0); // Clear everything
@@ -57,6 +83,7 @@ export function drawScene(
   // Tell WebGL how to pull out the positions from the position
   // buffer into the vertexPosition attribute.
   setPositionAttribute(gl, buffers, programInfo);
+  setColorAttribute(gl, buffers, programInfo);
 
   // Tell WebGL to use our program when drawing
   gl.useProgram(programInfo.program);
