@@ -329,24 +329,71 @@ function App() {
 
     const vsSource = `
     attribute vec4 aVertexPosition;
-    attribute vec4 aVertexColor;
 
     uniform mat4 uModelViewMatrix;
     uniform mat4 uProjectionMatrix;
 
-    varying lowp vec4 vColor;
-
     void main(void) {
       gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-      vColor = aVertexColor;
     }
   `;
 
     const fsSource = `
-    varying lowp vec4 vColor;
+    precision highp float;
+
+    uniform float uCanvasWidth;
+    uniform float uCanvasHeight;
+    uniform float uPosX;
+    uniform float uPosY;
+    uniform float uSizeX;
+    uniform float uSizeY;
+    uniform float uCx;
+    uniform float uCy;
+    uniform float uMaxIterations;
+
+    // HSV to RGB conversion
+    vec3 hsvToRgb(vec3 c) {
+      vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+      vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+      return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+    }
+
+    // Scale function - maps value from one range to another
+    float scale(float value, float fromStart, float fromEnd, float toStart, float toEnd) {
+      return ((value - fromStart) / (fromEnd - fromStart)) * (toEnd - toStart) + toStart;
+    }
+
+    // Julia set iteration count
+    float getIterationCount(float px, float py) {
+      float zx = uPosX + scale(px, 0.0, uCanvasWidth, -uSizeX / 2.0, uSizeX / 2.0);
+      float zy = uPosY + scale(py, uCanvasHeight, 0.0, -uSizeY / 2.0, uSizeY / 2.0);
+      
+      float iter = 0.0;
+      for (int i = 0; i < 300; i++) {
+        if (iter >= uMaxIterations) break;
+        float xtemp = zx * zx - zy * zy + uCx;
+        float ytemp = 2.0 * zx * zy + uCy;
+        zx = xtemp;
+        zy = ytemp;
+        if (abs(zx + zy) > 16.0) break;
+        iter += 1.0;
+      }
+      return iter;
+    }
 
     void main(void) {
-      gl_FragColor = vColor;
+      float px = gl_FragCoord.x;
+      float py = gl_FragCoord.y;
+      
+      float iter = getIterationCount(px, py);
+      
+      float hue = scale(iter, 0.0, uMaxIterations, 0.0, 1.0);
+      float saturation = 1.0;
+      float value = (iter >= uMaxIterations) ? 0.0 : 1.0;
+      
+      vec3 rgb = hsvToRgb(vec3(hue, saturation, value));
+      
+      gl_FragColor = vec4(rgb, 1.0);
     }
   `;
 
@@ -363,7 +410,6 @@ function App() {
       program: shaderProgram,
       attribLocations: {
         vertexPosition: gl.getAttribLocation(shaderProgram, "aVertexPosition"),
-        vertexColor: gl.getAttribLocation(shaderProgram, "aVertexColor"),
       },
       uniformLocations: {
         projectionMatrix: gl.getUniformLocation(
@@ -374,8 +420,35 @@ function App() {
           shaderProgram,
           "uModelViewMatrix",
         ),
+        canvasWidth: gl.getUniformLocation(shaderProgram, "uCanvasWidth"),
+        canvasHeight: gl.getUniformLocation(shaderProgram, "uCanvasHeight"),
+        posX: gl.getUniformLocation(shaderProgram, "uPosX"),
+        posY: gl.getUniformLocation(shaderProgram, "uPosY"),
+        sizeX: gl.getUniformLocation(shaderProgram, "uSizeX"),
+        sizeY: gl.getUniformLocation(shaderProgram, "uSizeY"),
+        cx: gl.getUniformLocation(shaderProgram, "uCx"),
+        cy: gl.getUniformLocation(shaderProgram, "uCy"),
+        maxIterations: gl.getUniformLocation(shaderProgram, "uMaxIterations"),
       },
     };
+
+    // Tell WebGL to use our program before setting uniforms
+    gl.useProgram(programInfo.program);
+
+    // Set uniform values from current state
+    const rect = canvas.current.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+
+    gl.uniform1f(programInfo.uniformLocations.canvasWidth, width);
+    gl.uniform1f(programInfo.uniformLocations.canvasHeight, height);
+    gl.uniform1f(programInfo.uniformLocations.posX, pos.x);
+    gl.uniform1f(programInfo.uniformLocations.posY, pos.y);
+    gl.uniform1f(programInfo.uniformLocations.sizeX, size.x);
+    gl.uniform1f(programInfo.uniformLocations.sizeY, size.y);
+    gl.uniform1f(programInfo.uniformLocations.cx, c.x);
+    gl.uniform1f(programInfo.uniformLocations.cy, c.y);
+    gl.uniform1f(programInfo.uniformLocations.maxIterations, maxIterations);
 
     // Here's where we call the routine that builds all the
     // objects we'll be drawing.

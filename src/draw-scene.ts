@@ -5,36 +5,45 @@ export type ProgramInfo = {
   program: WebGLProgram;
   attribLocations: {
     vertexPosition: number;
-    vertexColor: number;
   };
   uniformLocations: {
     projectionMatrix: WebGLUniformLocation | null;
     modelViewMatrix: WebGLUniformLocation | null;
+    canvasWidth: WebGLUniformLocation | null;
+    canvasHeight: WebGLUniformLocation | null;
+    posX: WebGLUniformLocation | null;
+    posY: WebGLUniformLocation | null;
+    sizeX: WebGLUniformLocation | null;
+    sizeY: WebGLUniformLocation | null;
+    cx: WebGLUniformLocation | null;
+    cy: WebGLUniformLocation | null;
+    maxIterations: WebGLUniformLocation | null;
   };
 };
 
-// Tell WebGL how to pull out the colors from the color buffer
-// into the vertexColor attribute.
-export function setColorAttribute(
+// Tell WebGL how to pull out the positions from the position
+// buffer into the vertexPosition attribute.
+function setPositionAttribute(
   gl: WebGLRenderingContext,
   buffers: Buffers,
   programInfo: ProgramInfo,
 ) {
-  const numComponents = 4;
-  const type = gl.FLOAT;
-  const normalize = false;
-  const stride = 0;
-  const offset = 0;
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffers.color);
+  const numComponents = 2; // pull out 2 values per iteration
+  const type = gl.FLOAT; // the data in the buffer is 32bit floats
+  const normalize = false; // don't normalize
+  const stride = 0; // how many bytes to get from one set of values to the next
+  // 0 = use type and numComponents above
+  const offset = 0; // how many bytes inside the buffer to start from
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
   gl.vertexAttribPointer(
-    programInfo.attribLocations.vertexColor,
+    programInfo.attribLocations.vertexPosition,
     numComponents,
     type,
     normalize,
     stride,
     offset,
   );
-  gl.enableVertexAttribArray(programInfo.attribLocations.vertexColor);
+  gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
 }
 
 export function drawScene(
@@ -48,7 +57,6 @@ export function drawScene(
   gl.depthFunc(gl.LEQUAL); // Near things obscure far things
 
   // Clear the canvas before we start drawing on it.
-
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   // Create a perspective matrix, a special matrix that is
@@ -59,7 +67,7 @@ export function drawScene(
   // and 100 units away from the camera.
 
   const fieldOfView = (45 * Math.PI) / 180; // in radians
-  const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+  const aspect = (gl.canvas as HTMLCanvasElement).clientWidth / (gl.canvas as HTMLCanvasElement).clientHeight;
   const zNear = 0.1;
   const zFar = 100.0;
   const projectionMatrix = mat4.create();
@@ -83,7 +91,6 @@ export function drawScene(
   // Tell WebGL how to pull out the positions from the position
   // buffer into the vertexPosition attribute.
   setPositionAttribute(gl, buffers, programInfo);
-  setColorAttribute(gl, buffers, programInfo);
 
   // Tell WebGL to use our program when drawing
   gl.useProgram(programInfo.program);
@@ -105,29 +112,4 @@ export function drawScene(
     const vertexCount = 4;
     gl.drawArrays(gl.TRIANGLE_STRIP, offset, vertexCount);
   }
-}
-
-// Tell WebGL how to pull out the positions from the position
-// buffer into the vertexPosition attribute.
-function setPositionAttribute(
-  gl: WebGLRenderingContext,
-  buffers,
-  programInfo: ProgramInfo,
-) {
-  const numComponents = 2; // pull out 2 values per iteration
-  const type = gl.FLOAT; // the data in the buffer is 32bit floats
-  const normalize = false; // don't normalize
-  const stride = 0; // how many bytes to get from one set of values to the next
-  // 0 = use type and numComponents above
-  const offset = 0; // how many bytes inside the buffer to start from
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
-  gl.vertexAttribPointer(
-    programInfo.attribLocations.vertexPosition,
-    numComponents,
-    type,
-    normalize,
-    stride,
-    offset,
-  );
-  gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
 }
