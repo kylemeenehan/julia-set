@@ -112,25 +112,16 @@ const KC_ITERMINUS = 188; // Less Iteration <
 const KC_FIXEC = 13; // Fix c Enter
 
 class JuliaSet {
-  private origSize: p5.Vector;
-  private size: p5.Vector;
-  private origPos: p5.Vector;
-  private pos: p5.Vector;
-  private maxIter: number;
-  private origZoom: number;
-  private zoom: number;
-  public printDebug: boolean;
+  private origSize: p5.Vector = new p5.Vector(3, 3);
+  private size: p5.Vector = new p5.Vector(this.origSize.x, this.origSize.y);
+  private originPosition: p5.Vector = new p5.Vector(0, 0);
+  private pos: p5.Vector = new p5.Vector(this.originPosition.x, this.originPosition.y);
+  private maxIterations = 150;
+  private origZoom = 1;
+  private zoom = this.origZoom;
+  public printDebug = false;
 
-  constructor() {
-    this.origSize = new p5.Vector(3, 3);
-    this.size = new p5.Vector(this.origSize.x, this.origSize.y);
-    this.origPos = new p5.Vector(0, 0); //Origin position
-    this.pos = new p5.Vector(this.origPos.x, this.origPos.y);
-    this.maxIter = 150;
-    this.origZoom = 1;
-    this.zoom = this.origZoom;
-    this.printDebug = false;
-  }
+  constructor() {}
 
   update(p: p5) {
     const moveSpeed = 0.1 * this.zoom;
@@ -145,8 +136,8 @@ class JuliaSet {
     if (reset === -7 || p.keyIsDown(KC_RESET)) {
       this.size.x = this.origSize.x;
       this.size.y = this.origSize.y;
-      this.pos.x = this.origPos.x;
-      this.pos.y = this.origPos.y;
+      this.pos.x = this.originPosition.x;
+      this.pos.y = this.originPosition.y;
       this.zoom = this.origZoom;
     }
 
@@ -162,7 +153,7 @@ class JuliaSet {
             }else this.maxIter = 0;
         }*/
 
-    this.maxIter = sliderIter.value();
+    this.maxIterations = sliderIter.value();
   }
 
   zoomAt(x, y, ammount, isZoomIn) {
@@ -228,7 +219,7 @@ class JuliaSet {
         );
 
         let iter = 0;
-        while (iter < this.maxIter) {
+        while (iter < this.maxIterations) {
           sqZ.x = z.x * z.x - z.y * z.y;
           sqZ.y = 2 * z.x * z.y;
           z.x = sqZ.x + c.x;
@@ -239,9 +230,9 @@ class JuliaSet {
         setPixelHSV(
           x,
           y,
-          p.map(iter, 0, this.maxIter, 0, 1),
+          p.map(iter, 0, this.maxIterations, 0, 1),
           1,
-          iter !== this.maxIter,
+          iter !== this.maxIterations,
         );
       }
     }
@@ -268,7 +259,7 @@ class JuliaSet {
           "\nzoom: " +
           p.str(p.round((1 / this.zoom) * 1000) / 1000) +
           "\niterations: " +
-          p.str(p.round(this.maxIter * 1000) / 1000),
+          p.str(p.round(this.maxIterations * 1000) / 1000),
         5,
         19,
       );
